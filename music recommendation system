@@ -1,0 +1,126 @@
+import numpy as np
+import pandas as pd
+import seaborn as sb
+import matplotlib.pyplot as mlt
+from matplotlib import style
+musicdata = pd.read_csv("genres_v2.csv");
+musicdata.head()
+musicdata.describe()
+musicdata.columns
+musicdata['title'].isna().value_counts()
+df = musicdata.drop('song_name',axis=1)
+musicdata.shape
+musicdata.duplicated().sum()
+musicdata.drop_duplicates(inplace=True)
+musicdata.duplicated().sum()
+musicdata.isna().sum()
+musicdata.describe()
+musicdata['song_name'].isna().value_counts()
+corrilation_data = musicdata.corr()
+corrilation_data
+mlt.figure (figsize=(20, 12))
+sb.heatmap(corrilation_data,annot=True);
+musicdata.drop(['type'],axis=1,inplace=True)
+musicdata.dropna(subset=['song_name'],inplace=True)
+musicdata.shape
+from sklearn import preprocessing
+import math
+feature_cols = ['energy','loudness','valence','danceability','acousticness','instrumentalness','speechiness','tempo']
+normalized = preprocessing.normalize(musicdata[feature_cols])
+normalized = pd.DataFrame(normalized,columns=feature_cols)
+normalized['mean']  = normalized.mean(axis =1)
+from scipy.stats import skewnorm
+style.use('seaborn')
+sb.catplot(data=musicdata,x='genre',y= 'danceability',kind='box',height=15)
+def FindSkewness(value):
+    if value > 0: 
+        return 'Positive Skewness'
+    elif value < 0:
+        return'Negative Skewness'
+    return 'No Skewness'
+musicSkewness = musicdata.skew(axis=0)
+
+musicSkewness = np.round(musicSkewness,decimals=2)
+numeric_cols  = musicdata._get_numeric_data().columns.tolist()
+
+for i, column in enumerate(numeric_cols):
+    sb.histplot(musicdata[column],bins = 20,kde = True);
+    conclusion = FindSkewness(musicSkewness[i])
+    mlt.title(conclusion)
+    mlt.figtext(0.5,0.01,f"skewness : {musicSkewness[i]}")
+    mlt.show()
+def getSongIndex(songName):
+    
+    bool = musicdata['song_name'].isin([songName])
+    # Getting Index Of Song If Present
+    sindex = bool[bool==True].index[0]
+    return sindex
+songName = 'Symbiote'
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics.pairwise import cosine_similarity
+linear_kernal = linear_kernel(normalized)
+euclidian = euclidean_distances(normalized)
+consine = cosine_similarity(normalized)
+def recommendation(m_name,model =linear_kernal):
+    # default model is linear kernal 
+    SongIndex = getSongIndex(m_name)
+    score = list(enumerate(model[SongIndex]))
+    sim_score = sorted(score,key = lambda x:x[1],reverse = True)
+    sim_score = sim_score[1:11]
+    Index = [i[0] for i in sim_score]
+    return musicdata["song_name"].iloc[Index]
+musicdata.head()
+recommendation(songName)
+recommendation(songName,model =euclidian )
+recommendation(songName,model =consine )
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline 
+#Import models
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+#Model evaluation
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import precision_score, recall_score,f1_score
+from scikitplot.metrics import plot_roc_curve
+data=pd.read_csv('genres_v2.csv')
+data.head()
+data.shape
+data.head().T
+data["genre"].value_counts()
+data["genre"].value_counts().plot(kind="barh",color=["lightblue"],title="Genres");
+data.isna().sum()
+corr_matrix=data.corr()
+fig,ax=plt.subplots(figsize=(15,10))
+ax=sns.heatmap(corr_matrix,
+              annot=True,
+              linewidths=0.5,
+              fmt=".2f",
+              cmap="YlGnBu");
+num_data=data.drop(["title","Unnamed: 0","song_name","analysis_url","track_href","uri","id","type"],axis=1) #drop all non-numeric columns
+X=num_data.drop("genre",axis=1)
+y=num_data["genre"]
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=1)
+models={"LogReg":LogisticRegression(),
+       "KNN":KNeighborsClassifier(),
+       "Random Forest":RandomForestClassifier()}
+def fit_and_score (models,X_train,X_test,y_train,y_test):
+    """
+    Fits and evaluates given machine learning models
+    """
+    np.random.seed(1)
+    model_scores={}
+    for name , model in models.items():
+        model.fit(X_train,y_train)
+        model_scores[name]=model.score(X_test,y_test)
+    return model_scores
+model_scores=fit_and_score(models=models,X_train=X_train,X_test=X_test,y_train=y_train,y_test=y_test)
+model_scores
+model_compare=pd.DataFrame(model_scores,index=["Accuracy"])
+model_compare.T.plot.barh(color=["lightblue"]);
